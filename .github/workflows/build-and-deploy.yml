@@ -1,0 +1,86 @@
+name: Build and Deploy
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_PATH: build
+    steps:
+      - uses: actions/checkout@v2
+###
+# Create artifact from build directory
+##
+      - name: Create Deployment Artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: build
+          path: ${{ env.BUILD_PATH }}
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      WEBHOOK_URL_TEST: https://povwpeuzzc.execute-api.us-east-1.amazonaws.com/test/dispatch
+      WEBHOOK_URL_ACC: https://5g83joxhe5.execute-api.us-east-1.amazonaws.com/acc/dispatch
+      WEBHOOK_URL_PROD: https://rlilbiqlpf.execute-api.us-east-1.amazonaws.com/prod/dispatch
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get Commit Information
+        id: commit-info
+        run: |
+          echo ::set-output name=timestamp::$(git log -1 --format=%cI)
+          echo ::set-output name=author::$(git log -1 --format=%ce)
+          echo ::set-output name=message::$(git log -1 --format=%B)
+      - name: Fetch Artifact URL
+        id: artifacts
+        uses: octokit/request-action@v2.0.2
+        with:
+          route: GET /repos/${{ github.repository }}/actions/artifacts
+          repository: ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Generate Deployment Hook Payload
+        id: payload
+        run: |
+          echo ::set-output name=data::"{ \
+            \"archive_url\": \"$(echo '${{ steps.artifacts.outputs.data}}' | jq -r '.artifacts[0].archive_download_url?')\", \
+            \"timestamp\": \"${{ steps.commit-info.outputs.timestamp }}\", \
+            \"author\": \"${{ steps.commit-info.outputs.author }}\", \
+            \"message\": \"${{ steps.commit-info.outputs.message }}\" \
+            }"
+      - name: Invoke Test Deployment Hook
+        uses: distributhor/workflow-webhook@v1
+        env:
+          webhook_url: ${{ env.WEBHOOK_URL_TEST }}
+          webhook_secret: ${{ secrets.GITHUBSECRET }}
+          data: ${{ steps.payload.outputs.data }}
+###
+# Add these back in after all games have been deployed to test and QA'd
+###
+#      - name: Invoke Acceptance Deployment Hook
+#        if: github.event.action == 'deploy_artifact'
+#        uses: distributhor/workflow-webhook@v1
+#        env:
+#          webhook_url: ${{ env.WEBHOOK_URL_ACC }}
+#          webhook_secret: ${{ secrets.GITHUBSECRET }}
+#          data: ${{ steps.payload.outputs.data }}
+#      - name: Invoke Production Deployment Hook
+#        if: github.event.action == 'deploy_artifact'
+#        uses: distributhor/workflow-webhook@v1
+#        env:
+#          webhook_url: ${{ env.WEBHOOK_URL_PROD }}
+#          webhook_secret: ${{ secrets.GITHUBSECRET }}
+#          data: ${{ steps.payload.outputs.data }}
+  cleanup:
+    needs: deploy
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Cleanup Workflow
+        run: |
+          echo ::add-mask::${{ secrets.GITHUBOAUTHVAL }}
+          curl --verbose --fail --show-error --location --request \
+            POST "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+            --header "Authorization: token ${{ secrets.GITHUBOAUTHVAL }}" \
+            --header 'Content-Type: application/json' \
+            --header 'Accept: application/vnd.github.everest-preview+json' \
+            --data-raw "{\"event_type\": \"delete_all_artifacts\", \"client_payload\": {\"parent_runid\": \"${{ github.run_id }}\", \"parent_repo\": \"${{ github.repository }}\"}}"
