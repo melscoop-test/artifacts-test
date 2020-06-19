@@ -19,9 +19,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      WEBHOOK_URL_TEST: https://ent9sesdf09g.x.pipedream.net
-      WEBHOOK_URL_ACC: https://ent9sesdf09g.x.pipedream.net
-      WEBHOOK_URL_PROD: https://ent9sesdf09g.x.pipedream.net
+      WEBHOOK_URL_TEST: https://enf0t7nqkeqdw.x.pipedream.net
+      WEBHOOK_URL_ACC: https://enf0t7nqkeqdw.x.pipedream.net
+      WEBHOOK_URL_PROD: https://enf0t7nqkeqdw.x.pipedream.net
     steps:
       - uses: actions/checkout@v2
       - name: Get Commit Information
