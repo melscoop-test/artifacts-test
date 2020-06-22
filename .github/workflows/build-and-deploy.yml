@@ -56,7 +56,7 @@ jobs:
       - name: Download Artifact
         id: download_artifact
         run: |
-          curl ${{GITHUB_ACTOR}}:${{secrets.WF_TOKEN}} -H "Content-Type: application/json" ${{payload.archive_url}}
+          curl ${GITHUB_ACTOR}:${secrets.WF_TOKEN} -H "Content-Type: application/json" ${payload.archive_url}
 
 ###
 # Add these back in after all games have been deployed to test and QA'd
