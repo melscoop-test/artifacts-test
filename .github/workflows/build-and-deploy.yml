@@ -53,6 +53,12 @@ jobs:
           webhook_url: ${{ env.WEBHOOK_URL_TEST }}
           webhook_secret: ${{ secrets.GITHUBSECRET }}
           data: ${{ steps.payload.outputs.data }}
+      - name: Download Artifact
+        id: download_artifact
+        uses: actions/checkout@v2
+        run: |
+          curl ${{GITHUB_ACTOR}}:${{secrets.WF_TOKEN}} -H "Content-Type: application/json" ${{payload.archive_url}}
+
 ###
 # Add these back in after all games have been deployed to test and QA'd
 ###
