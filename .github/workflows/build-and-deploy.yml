@@ -55,7 +55,6 @@ jobs:
           data: ${{ steps.payload.outputs.data }}
       - name: Download Artifact
         id: download_artifact
-        uses: actions/checkout@v2
         run: |
           curl ${{GITHUB_ACTOR}}:${{secrets.WF_TOKEN}} -H "Content-Type: application/json" ${{payload.archive_url}}
 
