@@ -1,0 +1,16 @@
+  name: Build and Deploy
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke Test Deployment Hook
+        uses: distributhor/workflow-webhook@v1
+        env:
+          webhook_url: ${{ env.WEBHOOK_URL_TEST }}
+          webhook_secret: ${{ secrets.GITHUBSECRET }}
+          data: ${{ steps.payload.outputs.data }}
+      - name: Download Artifact
+        id: download_artifact
+        run: |
+          curl ${GITHUB_ACTOR}:${secrets.WF_TOKEN} -H "Content-Type: application/json" ${payload.archive_url}
